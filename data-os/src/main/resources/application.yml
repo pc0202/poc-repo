@@ -1,0 +1,22 @@
+spring:
+  profiles.active: dev
+---
+##################################################################
+#                      DEVELOPMENT PROFILE                       #
+##################################################################
+spring:
+  profiles: dev
+  output:
+    ansi:
+      enabled: ALWAYS
+name: dev-yaml
+enviroment: development
+
+database:
+  provider: ${database_provider:NEO4J}
+  neo4j:
+    embedded: ${database_embedded:false}
+    host: ${database_host:localhost}
+    port: ${database_port:7687}
+    database_directory: ${database_directory:/data/databases/graph.db}
+    
