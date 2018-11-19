@@ -1,2 +1,2 @@
 This repository exist temporary for POC or reach activities.
-Currently TODO: POC activities for JSON rest api to persist using TinkerPop - Neo4j Graph .
+Persist graph using TinkerPop to Neo4j Graph .
