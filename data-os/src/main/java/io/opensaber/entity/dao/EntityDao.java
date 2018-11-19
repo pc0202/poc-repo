@@ -38,22 +38,27 @@ public class EntityDao implements IEntityDao {
 	public boolean addGraph(Graph entity) throws Exception {
 
 		boolean isCommited = false;
-		Graph graphStore = new Neo4jGraphDataSource(environment).getGraphStore();
-		System.out.println("graphstroe " + graphStore);
+		Graph destinationgraph = new Neo4jGraphDataSource(environment).getGraphStore();
+		System.out.println("graphstroe " + destinationgraph);
 
-		Graph graph = (TinkerGraph) entity;
+		Graph sourceGraph = (TinkerGraph) entity;		
+		
 		try {
-			GraphTraversalSource traversalSourceForEntity = graph.traversal();
-			if (graphStore.features().graph().supportsTransactions()) {
-				org.apache.tinkerpop.gremlin.structure.Transaction tx = graphStore.tx();
+			GraphTraversalSource sourceTraversal = sourceGraph.traversal();
+			if (destinationgraph.features().graph().supportsTransactions()) {
+				org.apache.tinkerpop.gremlin.structure.Transaction tx = destinationgraph.tx();
 				tx.onReadWrite(org.apache.tinkerpop.gremlin.structure.Transaction.READ_WRITE_BEHAVIOR.AUTO);
 
-				addVerticesToGraphSource(graphStore, traversalSourceForEntity);
-				GraphTraversalSource traversalForGraphStore = graphStore.traversal();
-				addEdgesToGraphSource(traversalForGraphStore, traversalSourceForEntity);			
-				graphStore.tx().commit();
-				isCommited = true;
+				//Adding all the vertices from source graph to destination graph.
+				addVerticesToGraphSource(destinationgraph, sourceTraversal);
+				destinationgraph.tx().commit();
+
+				//adding edges(relations) form sourceTraversal in destination graph
+				GraphTraversalSource traversalForGraphStore = destinationgraph.traversal();			
+				addEdgesToGraphSource(traversalForGraphStore, sourceTraversal);
 				
+				destinationgraph.tx().commit();
+				isCommited = true;				
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -66,21 +71,28 @@ public class EntityDao implements IEntityDao {
 	 * @param traversalSourceForEntity
 	 */
 	private void addVerticesToGraphSource(Graph graphStore, GraphTraversalSource traversalSourceForEntity){
-		System.out.println("=====================Traversal Vertices==================================");
-		GraphTraversal<Vertex, Vertex> gtV = traversalSourceForEntity.clone().V();
-		while (gtV.hasNext()) {
-			Vertex v = gtV.next();
-			System.out.println("vertex " + v + " " + v.label());
-			// TODO: access multiple properties.
-			Vertex v1 = null;
-			for (String key : v.keys()) {
-				VertexProperty vp = v.property(key);
-				System.out.println(vp.key() + ": " + vp.value());
-				v1 = graphStore.addVertex(T.label, v.label(), vp.key(), vp.value());
 
-			}
+		GraphTraversal<Vertex, Vertex> gtV = traversalSourceForEntity.V();
+		GraphTraversalSource traversalForGraphStore = graphStore.traversal();
+		Vertex cloneVertex = null;
+		while (gtV.hasNext()) {
+			Vertex v = gtV.next();			
+			cloneVertex = copyVertexToGraphSource(graphStore, v);			
 		}
+		traversalForGraphStore.tx().commit();
+
 	}
+	
+	//TODO: Move out GraphFeatures for granularity
+	private Vertex copyVertexToGraphSource(Graph graphStore, Vertex vertexofEntitySource){
+		String key = vertexofEntitySource.keys().iterator().next();
+		VertexProperty vp = vertexofEntitySource.property(key);			
+		Vertex vertex = graphStore.addVertex(T.label, vertexofEntitySource.label(),
+				"label", vertexofEntitySource.label(), vp.key(), vp.value());		
+		return vertex;
+	}
+	
+
 	/**
 	 * Traversing the edges of given graph and add the edges to graphSource traversal.
 	 * @param traversalForGraphStore
@@ -88,16 +100,11 @@ public class EntityDao implements IEntityDao {
 	 */
 	private void addEdgesToGraphSource(GraphTraversalSource traversalForGraphStore, GraphTraversalSource traversalSourceForEntity){
 		System.out.println("=====================Traversal Edges==================================");
-		GraphTraversal<Edge, Edge> gtE = traversalSourceForEntity.clone().E();
+		GraphTraversal<Edge, Edge> gtE = traversalSourceForEntity.E();
 		while (gtE.hasNext()) {
 			Edge e = gtE.next();
-			System.out.println("Edge traversed label " + e.label());
-			System.out.println("Edge traversed keys " + e.keys().size());
-			System.out.println(e+" invertex - "+e.inVertex()+" outvertex - "+e.outVertex());
-			String propertyKey = null;
-			if(e.keys().iterator().hasNext()){
-				propertyKey = e.keys().iterator().next();
-			}
+			String propertyKey = e.keys().iterator().next();
+
 			GraphTraversal<Vertex, Vertex> vc = traversalForGraphStore.V().has(propertyKey,e.inVertex().property(propertyKey).value());
 			GraphTraversal<Vertex, Vertex> vd = traversalForGraphStore.V().has(propertyKey,e.outVertex().property(propertyKey).value());
 
@@ -110,90 +117,22 @@ public class EntityDao implements IEntityDao {
 			}
 		}
 	}
-	
-/*	public String addGraph(Graph entity) throws Exception {
+	//TOOD: move out to GraphFeatures for granularity
+	private void addEdges(Vertex vOut, GraphTraversalSource traversalForGraphStore, GraphTraversalSource traversalSourceForEntity){
+		GraphTraversal<Edge, Edge> gtE = traversalSourceForEntity.E();
+		while (gtE.hasNext()) {
+			Edge e = gtE.next();
+			String propertyKey = e.keys().iterator().next();
 
-		Graph graphStore = new Neo4jGraphDataSource(environment).getGraphStore();
-		System.out.println("graphstroe " + graphStore);
-
-		Graph graph = (TinkerGraph) entity;
-		// graph.
-		GraphTraversalSource entityTraversalSource = graph.traversal();
-		if (graphStore.features().graph().supportsTransactions()) {
-			org.apache.tinkerpop.gremlin.structure.Transaction tx = graphStore.tx();
-			tx.onReadWrite(org.apache.tinkerpop.gremlin.structure.Transaction.READ_WRITE_BEHAVIOR.AUTO);
-
-			//Process: Traversing vertices of entity
-			GraphTraversal<Vertex, Vertex> gtV = entityTraversalSource.clone().V();
-			while (gtV.hasNext()) {
-				Vertex v = gtV.next();
-				System.out.println("vertex " + v + " " + v.label());
-
-				// TODO: access multiple properties.
-				Vertex v1 = null;
-				for (String key : v.keys()) {
-					// vproperties.put(key, v.value(key));
-					VertexProperty vp = v.property(key);
-					System.out.println(vp.key() + ": " + vp.value());
-					v1 = graphStore.addVertex(T.label, v.label(), vp.key(), vp.value());
-
-				}
-				Iterator<Edge> outEdgeIter = v.edges(Direction.OUT);
-				while (outEdgeIter.hasNext()) {
-					Edge e = outEdgeIter.next();
-					System.out.println("edged out " + e.label() + " - " + e.inVertex().property("name").value());
-
-					GraphTraversal<Vertex, Vertex> vc = graphStore.traversal().V().has("name",
-							e.inVertex().property("name").value());// graphStore.vertices(e.inVertex().id()).next();
-					System.out.println("vc " + vc);
-
-					while (vc.hasNext()) {
-						Vertex vx = vc.next();
-						v1.addEdge(e.label(), vx, "name", e.label());
-					}
-
-				}
+			GraphTraversal<Vertex, Vertex> vins = traversalForGraphStore.V().has(propertyKey,e.inVertex().property(propertyKey).value());
+			while(vins.hasNext()){
+				Vertex vi = vins.next();
+				vOut.addEdge(e.label(), vi, propertyKey, e.label());
 
 			}
-			System.out.println("================================================================================");
-			GraphTraversal<Edge, Edge> gtE = entityTraversalSource.clone().E();
-			while (gtE.hasNext()) {
-				Edge e = gtE.next();
-				System.out.println("Edge traversed label " + e.label());
-				System.out.println("Edge traversed keys " + e.keys().size());
-				System.out.println(e+" invertex - "+e.inVertex()+" outvertex - "+e.outVertex());
-				GraphTraversal<Vertex, Vertex> vc = graphStore.traversal().V().has("name",e.inVertex().property("name").value());
-				GraphTraversal<Vertex, Vertex> vd = graphStore.traversal().V().has("name",e.outVertex().property("name").value());
-
-				while (vc.hasNext()) {
-					Vertex vi = vc.next();
-					while(vd.hasNext()){
-						Vertex vo = vd.next();
-
-						vi.addEdge(e.label(), vo, "name", e.label());
-					}
-				}
-			}
-			//graphStore.tx().commit();
-
-			
-			 * Vertex v1 = graphStore.addVertex(T.label, "persons", "type",
-			 * "Persons");
-			 * 
-			 * final Vertex v2 = graphStore.addVertex(T.label, "person", "name",
-			 * "marko"); final Vertex v3 = graphStore.addVertex(T.label,
-			 * "person", "name", "vadas");
-			 * 
-			 * final Edge e1 = v2.addEdge("type", v1, "name", "type"); final
-			 * Edge e2 = v3.addEdge("type", v1, "name", "type"); final Edge e3 =
-			 * v2.addEdge("friend", v3, "name", "friend");
-			 
-
-			
-
 		}
-		return null;
-	}*/
+	}
+	
 
 	public boolean updateGraph(String id, Graph entityToUpdate) throws Exception {
 		// TODO Auto-generated method stub

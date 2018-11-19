@@ -31,18 +31,24 @@ public class EntityDaoTest {
 	@Test
 	public void testToCreateGraph() throws Exception{		
 		
-		//Structure graph 		
-		Vertex v1 = graph.addVertex(T.label, "persons", "name", "Persons");
+		//Structure graph 	
 		
-        final Vertex v2 = graph.addVertex(T.label, "person", "name", "marko");
-        final Vertex v3 = graph.addVertex(T.label, "person", "name", "vadas");
+		Vertex v1 = graph.addVertex(T.label, "persons", "name", "Persons");
+		v1.property("type", "Persons");
+		
+        final Vertex v2 = graph.addVertex(T.label, "person", "name", "Person1");
+        v2.property("name", "marko");
+        v2.property("skill", "java");
+        final Vertex v3 = graph.addVertex(T.label, "person", "name", "Person2");
+        v3.property("name", "vadas");
+        v3.property("skill", "Python");
         
         v2.addEdge("type", v1, "name", "type");
         v3.addEdge("type", v1, "name", "type");
         v2.addEdge("friend", v3, "name", "friend");
-		
-		boolean isCommited = aEntityDao.addGraph(graph);
-		System.out.println("is tinker pop graph persist? "+isCommited);
+
+        aEntityDao.addGraph(graph);
+		graph.clear();
 			
 	}
 
