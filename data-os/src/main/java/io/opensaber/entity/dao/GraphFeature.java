@@ -120,6 +120,10 @@ public class GraphFeature {
 		graph.tx().commit();
 	}
 	
+	public Graph getGraph(){
+		return graph;
+	}
+	
 	private void enableRwTransaction(){
 		if (graph.features().graph().supportsTransactions()) {
 			org.apache.tinkerpop.gremlin.structure.Transaction tx = graph.tx();

@@ -19,4 +19,5 @@ database:
     host: ${database_host:localhost}
     port: ${database_port:7687}
     database_directory: ${database_directory:/data/databases/graph.db}
-    
+    #database_directory: ${database_directory:C:\Users\Pritha Chattopadhyay\Desktop\neo4j-community-3.4.5-windows\neo4j-community-3.4.5\data\databases\graph.db}
+   
