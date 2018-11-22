@@ -23,12 +23,19 @@ public class GraphFeatureTest {
 	@Before
 	public void initializeGraph() {
 		graph = TinkerGraph.open();
+
 	}
 	
-	@Test @Ignore
-	public void testToCreateTypeVertexOfGraphFeature() throws IllegalAccessException{
+	@Test  
+	public void testToCreateTypeVertexOfGraphFeature(){
 		Vertex v1 = graph.addVertex(T.label, "teacher", "type", "teacher"); 
-		graphFeature.createTypeVertex(v1, "type");
+		try {
+			graphFeature.createTypeVertex(v1, "type");
+		} catch (IllegalAccessException e) {
+			// TODO Auto-generated catch block
+			//e.printStackTrace();
+			System.out.println("Exception "+e.getMessage());
+		}
 		graphFeature.persist();
 		graph.clear();
 
@@ -87,19 +94,11 @@ public class GraphFeatureTest {
 		graph.clear();	
 	}*/
 	
-	@Test @Ignore
-	public void timePerformanceTestAPIs() throws IllegalAccessException{
-
-		//create type node 
-		Vertex v1 = graph.addVertex(T.label, "teacher", "type", "teacher"); 
-		graphFeature.createTypeVertex(v1, "type");
-		graphFeature.persist();
-		
+	@Test 
+	public void timePerformanceTestAPIs(){
+	
 		//create node vertex
-		Vertex nodeVertex = graph.addVertex(T.label, "teacherA"); 
-		Vertex nodeChild = graph.addVertex(T.label, "AttibuteA"); 
-		nodeChild.addEdge("type", nodeVertex, "name", "attibute");
-		
+		Vertex nodeVertex = graph.addVertex(T.label, "teacherA"); 		
 	    long startTime = System.currentTimeMillis();
 
 		for(int i=0; i<1000; i++){
